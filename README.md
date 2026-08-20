@@ -82,6 +82,44 @@ Optional per-request knobs on `/v1/fetch` (all have defaults):
 
 Prerequisites: Python 3.11+.
 
+### One command
+
+```bash
+./dev.sh
+```
+
+`dev.sh` is idempotent — restarts are instant. On first run it:
+
+1. creates the virtualenv (`.venv`) and installs editable deps with dev extras
+2. fetches the Camoufox browser binary (~200-900 MB, cached in
+   `~/Library/Caches/camoufox` on macOS; only re-done on version bumps)
+3. generates a dev bearer token into `.env` (gitignored), so the server shell
+   and any curl shell share the same token across runs
+4. starts `uvicorn argus.main:app --reload --port 8000`
+
+On subsequent runs it skips each step that's already satisfied and just starts
+the server. The bearer token is printed in the startup banner; rotate it by
+deleting the `ARGUS_API_TOKENS=` line in `.env` and re-running. An explicit
+`ARGUS_API_TOKENS` env var takes precedence over `.env`.
+
+The server is up when `curl http://localhost:8000/health` returns
+`{"status":"ok","browser":"absent"}`. `browser: "absent"` is expected at boot —
+the browser launches lazily on the first `/v1/fetch` and tears down after 5 min
+idle (configurable via `ARGUS_IDLE_TIMEOUT_SECONDS`), so an idle dev machine
+doesn't hold ~500 MB of Firefox resident.
+
+### Interactive API docs (Swagger UI)
+
+With the server running, open:
+
+- `http://localhost:8000/docs` — Swagger UI; click **Authorize** 🔒, paste the
+  bearer token, then "Try it out" on any `/v1/*` endpoint — the header is sent
+  automatically, no hand-crafted curl.
+- `http://localhost:8000/redoc` — read-only schema browser.
+- `http://localhost:8000/openapi.json` — raw OpenAPI 3 contract.
+
+### Manual setup (what `dev.sh` automates)
+
 ```bash
 cd argus
 
@@ -90,8 +128,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 
-# 2. one-time: download the Camoufox Firefox binary (~200-900 MB, cached in
-#    ~/Library/Caches/camoufox on macOS; only needs re-doing on version bumps)
+# 2. one-time: download the Camoufox Firefox binary
 camoufox fetch
 
 # 3. generate a bearer token and export it
@@ -101,16 +138,11 @@ export ARGUS_API_TOKENS=$(python -c "import secrets; print(secrets.token_urlsafe
 uvicorn argus.main:app --reload --port 8000
 ```
 
-The server is up when `curl http://localhost:8000/health` returns
-`{"status":"ok","browser":"absent"}`. `browser: "absent"` is expected at boot —
-the browser launches lazily on the first `/v1/fetch` and tears down after 5 min
-idle (configurable via `ARGUS_IDLE_TIMEOUT_SECONDS`), so an idle dev machine
-doesn't hold ~500 MB of Firefox resident.
-
-Then test with real URLs:
+### Smoke test with curl
 
 ```bash
-export ARGUS_API_TOKEN=<the token you generated in step 3>
+# token from .env (written by dev.sh) or the one you exported above
+export ARGUS_API_TOKEN=<your token>
 
 curl -s -X POST http://localhost:8000/v1/fetch \
   -H "content-type: application/json" \
@@ -121,9 +153,9 @@ curl -s http://localhost:8000/health
 # after the first fetch: {"status":"ok","browser":"ready"}
 ```
 
-Note: the token only lives in the shell that started the server AND the shell
-you curl from — export the same value in both, or put it in a `.env` file
-(see `.env.example`; argus reads `.env` automatically).
+The token must be the same in the server shell and any shell you curl from —
+`dev.sh` handles this by persisting it to `.env`, which argus reads
+automatically (see `.env.example` for all `ARGUS_*` vars).
 
 ## Test locally
 
