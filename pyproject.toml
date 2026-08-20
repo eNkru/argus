@@ -1,0 +1,36 @@
+[project]
+name = "argus"
+version = "0.1.0"
+description = "General-purpose anti-detect browser fetch service (Camoufox-backed)."
+requires-python = ">=3.11"
+readme = "README.md"
+license = { file = "LICENSE" }
+dependencies = [
+    # Pin camoufox to 0.5.4 — the pip version whose `camoufox fetch` downloads
+    # browser build 152.0.4-beta.28, the exact build that passed every
+    # challenged retailer in the 2026-08 anti-bot spike. Bump deliberately and
+    # re-run the pass-rate matrix when you do.
+    "camoufox==0.5.4",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+    "httpx>=0.27",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/argus"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

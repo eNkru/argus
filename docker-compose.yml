@@ -1,0 +1,20 @@
+services:
+  argus:
+    build: .
+    restart: unless-stopped
+    environment:
+      ARGUS_API_TOKENS: ${ARGUS_API_TOKENS:-change-me}
+      ARGUS_AUTH_DISABLED: ${ARGUS_AUTH_DISABLED:-false}
+      ARGUS_CONCURRENCY: ${ARGUS_CONCURRENCY:-5}
+      ARGUS_IDLE_TIMEOUT_SECONDS: ${ARGUS_IDLE_TIMEOUT_SECONDS:-300}
+      ARGUS_FETCH_TIMEOUT_SECONDS: ${ARGUS_FETCH_TIMEOUT_SECONDS:-35}
+      ARGUS_RENDER_WAIT_SECONDS: ${ARGUS_RENDER_WAIT_SECONDS:-8}
+      ARGUS_DEFAULT_FINGERPRINT_OS: ${ARGUS_DEFAULT_FINGERPRINT_OS:-linux}
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
