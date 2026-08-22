@@ -28,6 +28,7 @@ from fastapi import APIRouter, Depends, Request
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
 from .. import jsonld
+from ..ai import PriceExtraction
 from ..auth import require_token
 from ..browser import BrowserManager
 from ..diagnostics import FailureTracker
@@ -111,13 +112,28 @@ async def _do_extract(
         # AiClient is mounted; otherwise degrade to a logged no-op — a missing
         # key must read as "no price extracted", never as a 500.
         ai_client = getattr(req.app.state, "ai_client", None)
-        if request.aiFallback and ai_client is None:
+        extraction: PriceExtraction | None = None
+        if request.aiFallback and ai_client is not None:
+            # ai.py never throws: provider errors, retries-exhausted, and
+            # schema mismatches all surface here as None.
+            extraction = await ai_client.extract_price(result.html, request.url)
+        elif request.aiFallback:
             # Only worth a log line when the caller actually wanted the AI
             # stage; aiFallback=false misses are the caller's explicit choice.
             logger.info(
                 "AI provider not configured (missing key) url=%s", request.url
             )
-        # Phase B mounts AiClient on app.state and calls
-        # ai_client.extract_price(result.html, request.url) here; until then
-        # every fallback attempt resolves to extraction_failed.
+        if extraction is not None:
+            # The AI path has no JSON-LD to return — that's why it fell back —
+            # so the rich node stays null and only the flat verdict ships.
+            return ExtractPriceResponseOk(
+                source="ai",
+                url=result.final_url,
+                available=extraction.available,
+                price=extraction.price,
+                currency=extraction.currency,
+                availability=None,
+                name=extraction.name,
+                jsonld=None,
+            )
         return ExtractPriceResponseFail(reason="extraction_failed")

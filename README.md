@@ -226,6 +226,18 @@ All prefixed `ARGUS_`; see `.env.example` for the full annotated list.
 | `ARGUS_FETCH_TIMEOUT_SECONDS` | `35` | Per-request navigation timeout. |
 | `ARGUS_RENDER_WAIT_SECONDS` | `8` | SPA render-stability wait cap. |
 | `ARGUS_DEFAULT_FINGERPRINT_OS` | `linux` | Camoufox fingerprint OS (keep `linux` with the provided Dockerfile). |
+| `ARGUS_AI_BASE_URL` | *(empty)* | OpenAI-compatible base URL for the `/v1/extract-price` AI fallback (no trailing `/chat/completions`). |
+| `ARGUS_AI_API_KEY` | *(empty)* | Provider API key (**secret** — never logged). |
+| `ARGUS_AI_MODEL` | *(empty)* | Chat model id, e.g. a DeepSeek free-tier model. |
+| `ARGUS_AI_ZEN_HOST` | *(empty)* | Optional: when the base URL's host matches, Zen parity headers below ride on AI requests. |
+| `ARGUS_AI_USER_AGENT` / `ARGUS_AI_CLIENT_HEADER` | *(empty)* | The Zen parity header values (`User-Agent` / `X-Opencode-Client`). |
+| `ARGUS_AI_CONCURRENCY` | `1` | Max concurrent LLM calls (free tiers 429 under bursts). |
+| `ARGUS_AI_MIN_INTERVAL_MS` | `200` | Minimum gap between LLM calls (live-tunable). |
+| `ARGUS_AI_MAX_RETRIES` | `3` | Retries for transient provider errors (429/502/503/504 only). |
+
+All three of `ARGUS_AI_BASE_URL` + `ARGUS_AI_API_KEY` + `ARGUS_AI_MODEL` must
+be set for the AI stage to exist; leave any empty and `/v1/extract-price`
+behaves as a deterministic JSON-LD-only service.
 
 ## Deploying alongside iris (the motivating client)
 

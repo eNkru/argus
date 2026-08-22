@@ -86,12 +86,36 @@ returned as `{ok:true, html}` so a caller with a richer registry can classify
 itself. The registry is pluggable (`DEFAULT_REGISTRY` is a plain list) so
 signatures can be extended without touching the fetch path.
 
+## Price extraction (JSON-LD-first, AI fallback)
+
+Since 2026-08-23 argus also offers ``POST /v1/extract-price`` — an extraction
+sibling to ``/v1/fetch``. It navigates through the same shared browser
+pipeline, then runs two stages on the rendered HTML:
+
+1. **Deterministic JSON-LD parse** (``jsonld.py``, no LLM): schema.org
+   Offer/AggregateOffer with a usable price (> 0). Verified live against
+   pbtech/kogan/farmers PDPs — zero per-site selectors. On a hit the caller
+   gets ``{price, currency, availability, name}`` plus the full primary
+   Product node as ``jsonld``.
+2. **AI fallback** (``ai.py``): only when stage 1 misses and the caller hasn't
+   sent ``aiFallback:false`` — an OpenAI-compatible LLM (raw httpx, no SDK)
+   reads a reduced page and returns ``{price, currency, name, available}``.
+   Configured via ``ARGUS_AI_*``; unconfigured/degraded AI maps to
+   ``extraction_failed``, never a 500. Blocked WAF pages short-circuit before
+   any LLM call.
+
+The boundary shift: AI extraction moved from "stays in the caller" into argus.
+What did NOT move: cross-product retry/backoff/pLimit orchestration and price-
+history storage stay caller-side; ``/v1/fetch`` remains pure transport and its
+response shape is unchanged.
+
 ## What stays in the caller (not argus)
 
-- Retry / backoff / pLimit — app-level orchestration.
+- Retry / backoff / pLimit across products — app-level orchestration.
 - Retailer-specific signature registries — app-specific.
 - Image magic-byte validation — the caller validates the bytes argus returns.
-- AI extraction — out of scope.
+- Price-history storage and alerting — the caller records readings; argus is
+  stateless per request.
 
 Argus is the **fetch transport**. The orchestration layer lives in the caller
 (e.g. iris's `fetch-page.ts`), now pointed at argus with a one-line base-URL +

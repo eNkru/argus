@@ -15,18 +15,22 @@ Argus is a single Python package (`src/argus/`), Python ≥3.11, FastAPI + Pydan
 ```
 src/argus/
 ├── main.py           # FastAPI app + lifespan (singletons on app.state)
-├── config.py         # pydantic-settings (all ARGUS_* env vars)
+├── config.py         # pydantic-settings (all ARGUS_* env vars incl. ARGUS_AI_*)
 ├── auth.py           # bearer-token dependency (constant-time compare)
 ├── browser.py        # shared Camoufox: lazy launch, idle teardown, single-flight
+├── navigate.py       # shared HTML navigation pipeline (fetch + extract routes)
 ├── render.py         # SPA render-wait + resilient content snapshot
 ├── signatures.py     # anti-bot blocked-page registry (pluggable)
+├── jsonld.py         # deterministic schema.org Offer/price extraction from ld+json
+├── ai.py             # OpenAI-compatible LLM fallback for price extraction (raw httpx)
 ├── diagnostics.py    # consecutive-failure tracking + degraded-browser logs
 ├── schemas.py        # pydantic request/response models (incl. Cookie shape)
 ├── cookies.py        # cookie normalization to the add_cookies shape
 └── routes/
-    ├── health.py     # GET /health        (unauthenticated)
-    ├── fetch.py      # POST /v1/fetch     (bearer-gated)
-    └── fetch_image.py# POST /v1/fetch-image (bearer-gated)
+    ├── health.py     # GET /health            (unauthenticated)
+    ├── fetch.py      # POST /v1/fetch         (bearer-gated)
+    ├── extract.py    # POST /v1/extract-price (bearer-gated; JSON-LD → AI)
+    └── fetch_image.py# POST /v1/fetch-image   (bearer-gated)
 
 tests/                # pytest, asyncio_mode=auto; pure modules only, no browser needed
 docs/                 # api-spec.md, architecture.md, future.md
@@ -38,7 +42,7 @@ docs/                 # api-spec.md, architecture.md, future.md
 
 - **Flat single package** — no nested service/repository layers. Each module owns one concern and carries a module-level docstring explaining *why* it exists (see `src/argus/browser.py`, `src/argus/signatures.py` for reference-quality examples).
 - **Routes live in `routes/`** — one file per endpoint group, each defining its own `APIRouter`. Auth is attached via router-level dependencies (`router = APIRouter(prefix="/v1", dependencies=[Depends(require_token)])` in `routes/fetch.py`), never per-handler.
-- **Singletons on `app.state`, never module globals** — `main.lifespan` constructs `Settings`, `BrowserManager`, `FailureTracker` once and stashes them; route handlers read `req.app.state.*`. Do not reintroduce module-global lifecycle state (this was deliberately refactored away from the iris sidecar pattern).
+- **Singletons on `app.state`, never module globals** — `main.lifespan` constructs `Settings`, `BrowserManager`, `FailureTracker`, and (when `ARGUS_AI_*` is fully configured) `AiClient` once and stashes them; route handlers read `req.app.state.*`. Do not reintroduce module-global lifecycle state (this was deliberately refactored away from the iris sidecar pattern). **One documented exception:** `ai.py`'s throttle semaphore + min-interval clock are module-level by design (iris parity — concurrency captured at first use, gap live-tunable); `_reset_throttle()` exists for tests only.
 - **Business logic lives in plain modules** (`browser.py`, `render.py`, `signatures.py`), routes stay thin: validate → delegate → map to response model.
 - **New env var?** Add to `Settings` in `config.py` (prefix `ARGUS_`, annotated with a comment) and to `.env.example` + README config table.
 

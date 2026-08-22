@@ -1,9 +1,10 @@
 """Argus FastAPI application + lifespan.
 
-The lifespan constructs the singleton ``Settings``, ``BrowserManager``, and
-``FailureTracker`` on ``app.state`` (so route handlers read them from there
-rather than re-parsing env per request), starts the idle watcher, and tears the
-browser down on shutdown. Routers are mounted under their own prefixes.
+The lifespan constructs the singleton ``Settings``, ``BrowserManager``,
+``FailureTracker``, and (when ``ARGUS_AI_*`` is fully configured) ``AiClient``
+on ``app.state`` (so route handlers read them from there rather than re-parsing
+env per request), starts the idle watcher, and tears the browser down on
+shutdown. Routers are mounted under their own prefixes.
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ from typing import AsyncIterator
 
 from fastapi import FastAPI
 
+from .ai import build_ai_client
 from .browser import BrowserManager
 from .config import Settings
 from .diagnostics import FailureTracker
@@ -31,12 +33,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.settings = settings
     app.state.browser_manager = BrowserManager(settings)
     app.state.failure_tracker = FailureTracker()
+    # None when ARGUS_AI_* is unconfigured: /v1/extract-price degrades to a
+    # JSON-LD-only service (a missing key must never read as a server error).
+    app.state.ai_client = build_ai_client(settings)
 
     await app.state.browser_manager.start()
     try:
         yield
     finally:
         await app.state.browser_manager.stop()
+        if app.state.ai_client is not None:
+            await app.state.ai_client.aclose()
 
 
 app = FastAPI(title="Argus", lifespan=lifespan)

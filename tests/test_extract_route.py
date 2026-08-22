@@ -266,6 +266,49 @@ def test_extract_rejects_relative_url() -> None:
     assert response.status_code == 422
 
 
+def test_extract_ai_fallback_returns_source_ai() -> None:
+    # Phase B arm: a mounted AiClient + JSON-LD miss + aiFallback=true → the
+    # LLM verdict ships with source="ai" and jsonld=null (no structured data
+    # exists — that's why the AI ran at all).
+    from argus.ai import PriceExtraction
+
+    async def fake_extract_price(html: str, url: str) -> PriceExtraction:
+        return PriceExtraction(
+            available=True, price="149.00", currency="NZD", name="No Jsonld Widget"
+        )
+
+    page = FakePage("<html><body>structured data? never heard of it</body></html>")
+    client = _client_for(page)
+    client.app.state.ai_client = SimpleNamespace(extract_price=fake_extract_price)
+    response = client.post("/v1/extract-price", json=_BASE_BODY, headers=AUTH)
+    assert response.status_code == 200
+    assert response.json() == {
+        "ok": True,
+        "source": "ai",
+        "url": "https://example.test/pdp",
+        "available": True,
+        "price": "149.00",
+        "currency": "NZD",
+        "availability": None,
+        "name": "No Jsonld Widget",
+        "jsonld": None,
+    }
+
+
+def test_extract_ai_none_result_maps_to_extraction_failed() -> None:
+    from argus.ai import PriceExtraction
+
+    async def failing_extract_price(html: str, url: str) -> PriceExtraction | None:
+        return None  # provider down / retries exhausted / garbage output
+
+    page = FakePage("<html><body>still no structured data</body></html>")
+    client = _client_for(page)
+    client.app.state.ai_client = SimpleNamespace(extract_price=failing_extract_price)
+    response = client.post("/v1/extract-price", json=_BASE_BODY, headers=AUTH)
+    assert response.status_code == 200
+    assert response.json()["reason"] == "extraction_failed"
+
+
 def test_failure_tracker_hit_counts_as_success() -> None:
     # White-box: the degradation trend reads consecutive failures; a completed
     # extraction must leave the counter at zero.
