@@ -11,6 +11,10 @@ The service never throws to the caller: navigation/timeout errors map to
 (including non-2xx challenge/deny pages), the HTML is always returned so the
 blocked-signature registry (or the caller's own, via ``detectBlocked:false``)
 can classify it.
+
+The Playwright lifecycle itself lives in ``navigate.fetch_html`` — shared with
+``POST /v1/extract-price`` since 2026-08-23. This module owns the response
+mapping and the exception ladder; behavior is unchanged by the extraction.
 """
 
 from __future__ import annotations
@@ -19,20 +23,17 @@ import asyncio
 import logging
 
 from fastapi import APIRouter, Depends, Request
-from playwright.async_api import Error as PlaywrightError
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
 from ..auth import require_token
 from ..browser import BrowserManager
-from ..cookies import to_playwright_cookies
 from ..diagnostics import FailureTracker
-from ..render import snapshot_content, wait_for_render
+from ..navigate import HtmlBlocked, HtmlFailed, HtmlOk, fetch_html
 from ..schemas import (
     FetchRequest,
     FetchResponseFail,
     FetchResponseOk,
 )
-from ..signatures import detect, is_retryable
 
 logger = logging.getLogger("argus.fetch")
 
@@ -57,112 +58,32 @@ async def _do_fetch(
 ) -> FetchResponseOk | FetchResponseFail:
     async with browser_manager.concurrency:
         try:
-            browser = await browser_manager.ensure_browser()
-
-            # Fresh ephemeral context per request — the isolated cookie jar.
-            ctx_kwargs: dict = {}
-            if request.locale:
-                ctx_kwargs["locale"] = request.locale
-            if request.userAgent:
-                ctx_kwargs["user_agent"] = request.userAgent
-            ctx = await browser.new_context(**ctx_kwargs)
-            try:
-                if request.cookies:
-                    # Cookies are secrets: log count only, never names/values.
-                    logger.debug(
-                        "injecting cookies url=%s count=%d",
-                        request.url,
-                        len(request.cookies),
-                    )
-                    try:
-                        await ctx.add_cookies(
-                            to_playwright_cookies(request.cookies)
-                        )
-                    except Exception as exc:  # noqa: BLE001 — never throw to the caller
-                        logger.warning(
-                            "cookie injection failed url=%s error_type=%s error=%s",
-                            request.url,
-                            type(exc).__name__,
-                            exc,
-                        )
-                        tracker.record_failure(
-                            request.url, exc, kind="cookie_injection"
-                        )
-                        return FetchResponseFail(reason="fetch_failed")
-
-                page = await ctx.new_page()
-                try:
-                    response = await page.goto(
-                        request.url,
-                        wait_until=request.waitUntil,
-                        timeout=request.timeoutMs,
-                    )
-                    if response is None:
-                        # page.goto returns None for navigations cancelled or
-                        # redirected before a response.
-                        tracker.record_failure(request.url, None, kind="no_response")
-                        return FetchResponseFail(reason="fetch_failed")
-
-                    # SPA render wait: client-rendered pages inject content via
-                    # JS after domcontentloaded. Best-effort; never raises.
-                    await wait_for_render(
-                        page, render_wait_seconds=request.renderWaitMs / 1000
-                    )
-
-                    # Always snapshot the rendered HTML — including non-2xx
-                    # challenge/deny pages — so classification can run.
-                    html = await snapshot_content(page, url=request.url)
-                    final_url = page.url
-
-                    if not response.ok:
-                        logger.warning(
-                            "fetch non-2xx status (returning HTML for "
-                            "classification) url=%s status=%d final_url=%s "
-                            "html_len=%d",
-                            request.url,
-                            response.status,
-                            final_url,
-                            len(html),
-                        )
-
-                    if request.detectBlocked:
-                        signature = detect(html, enabled=True)
-                        if signature is not None:
-                            # A response with content counts as success for the
-                            # degradation trend: a block is a per-site signal,
-                            # not a shared-browser-degradation signal.
-                            tracker.record_success()
-                            return FetchResponseFail(
-                                reason="blocked",
-                                signature=signature,
-                                retryable=is_retryable(signature),
-                            )
-
-                    tracker.record_success()
-                    return FetchResponseOk(html=html, url=final_url)
-                finally:
-                    try:
-                        await page.close()
-                    except Exception as exc:  # noqa: BLE001 — cleanup must not mask the fetch result
-                        logger.warning(
-                            "page close failed url=%s error_type=%s error=%s",
-                            request.url,
-                            type(exc).__name__,
-                            exc,
-                        )
-            finally:
-                try:
-                    await ctx.close()
-                except Exception as exc:  # noqa: BLE001 — cleanup must not mask the fetch result
-                    logger.warning(
-                        "context close failed url=%s error_type=%s error=%s",
-                        request.url,
-                        type(exc).__name__,
-                        exc,
-                    )
+            result = await fetch_html(browser_manager, request, tracker=tracker)
         except (PlaywrightTimeoutError, asyncio.TimeoutError) as exc:
             tracker.record_failure(request.url, exc, kind="timeout")
             return FetchResponseFail(reason="fetch_failed")
         except Exception as exc:  # noqa: BLE001 — never throw to the caller
             tracker.record_failure(request.url, exc, kind="error")
             return FetchResponseFail(reason="fetch_failed")
+
+        if isinstance(result, HtmlFailed):
+            return FetchResponseFail(reason="fetch_failed")
+        if isinstance(result, HtmlBlocked):
+            return FetchResponseFail(
+                reason="blocked",
+                signature=result.signature,
+                retryable=result.retryable,
+            )
+        # Only HtmlOk remains in the union.
+        if not 200 <= result.status < 300:
+            logger.warning(
+                "fetch non-2xx status (returning HTML for "
+                "classification) url=%s status=%d final_url=%s "
+                "html_len=%d",
+                request.url,
+                result.status,
+                result.final_url,
+                len(result.html),
+            )
+
+        return FetchResponseOk(html=result.html, url=result.final_url)

@@ -99,6 +99,65 @@ paths:
                       signature: { type: string, description: "Present only when reason=blocked and detectBlocked=true" }
                       retryable: { type: boolean, description: "Present only when reason=blocked; whether a fresh fetch can plausibly pass this block" }
 
+  /v1/extract-price:
+    post:
+      summary: Fetch a page and extract its product price (JSON-LD first)
+      security: [bearerAuth: []]
+      description: |
+        Navigates to the URL through the shared anti-detect browser, then
+        parses the page's JSON-LD (`application/ld+json`) for a schema.org
+        Offer/AggregateOffer with a usable price (> 0). On a hit, returns the
+        Decimal-normalized price plus the full primary Product node as
+        `jsonld` (name/brand/gtin/reviews ride along) — no LLM is invoked.
+        On a miss with `aiFallback=true`, an OpenAI-compatible LLM extracts
+        `{price, currency, name, available}` from the page (requires the
+        `ARGUS_AI_*` settings; unconfigured/degraded AI maps to
+        `extraction_failed`). Blocked WAF pages short-circuit BEFORE any LLM
+        call and return the signature.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url:            { type: string, format: uri }
+                cookies:
+                  type: array
+                  items: { $ref: "#/components/schemas/Cookie" }
+                waitUntil:      { type: string, enum: [domcontentloaded, load, networkidle], default: domcontentloaded }
+                renderWaitMs:   { type: integer, default: 8000 }
+                timeoutMs:      { type: integer, default: 35000 }
+                detectBlocked:  { type: boolean, default: true }
+                locale:         { type: string }
+                userAgent:      { type: string }
+                aiFallback:     { type: boolean, default: true, description: "false = deterministic JSON-LD-only (never invokes the LLM)" }
+      responses:
+        "200":
+          description: Never throws. ok or structured failure.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      ok:           { const: true }
+                      source:       { type: string, enum: [jsonld, ai] }
+                      url:          { type: string, format: uri, description: "Final URL after redirects" }
+                      available:    { type: boolean }
+                      price:        { type: string, nullable: true, description: "Decimal-normalized 2dp string, e.g. '599.99'; null when not available" }
+                      currency:     { type: string, nullable: true }
+                      availability: { type: string, nullable: true, description: "schema.org ItemAvailability URI (source=jsonld only)" }
+                      name:         { type: string, nullable: true }
+                      jsonld:       { type: object, nullable: true, description: "Primary Product node (source=jsonld only); null for source=ai" }
+                  - type: object
+                    properties:
+                      ok:        { const: false }
+                      reason:    { type: string, enum: [blocked, fetch_failed, extraction_failed] }
+                      signature: { type: string, nullable: true, description: "Present only when reason=blocked" }
+                      retryable: { type: boolean, nullable: true, description: "Present only when reason=blocked" }
+
   /v1/fetch-image:
     post:
       summary: Fetch a binary image through the browser

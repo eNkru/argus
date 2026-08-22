@@ -29,6 +29,7 @@ of the comma-separated values in `ARGUS_API_TOKENS`. `/health` is open.
 |--------|-------------------|-------------------------------------------------------|
 | GET    | `/health`         | Service readiness (browser lazy/absent is OK)         |
 | POST   | `/v1/fetch`       | Fetch rendered page HTML (optional cookies/locale/UA)  |
+| POST   | `/v1/extract-price` | Fetch + parse product price — JSON-LD first, AI fallback |
 | POST   | `/v1/fetch-image` | Fetch a binary image through the browser              |
 
 The service never throws to the caller: navigation/timeout errors map to

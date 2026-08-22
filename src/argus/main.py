@@ -17,7 +17,7 @@ from fastapi import FastAPI
 from .browser import BrowserManager
 from .config import Settings
 from .diagnostics import FailureTracker
-from .routes import fetch, fetch_image, health
+from .routes import extract, fetch, fetch_image, health
 
 logging.basicConfig(
     level=logging.INFO,
@@ -42,4 +42,5 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(title="Argus", lifespan=lifespan)
 app.include_router(health.router)
 app.include_router(fetch.router)
+app.include_router(extract.router)
 app.include_router(fetch_image.router)
