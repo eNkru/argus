@@ -184,17 +184,34 @@ curl -s -X POST http://localhost:8000/v1/fetch \
 
 ### docker compose (recommended)
 
+Configuration is `.env`-driven: the compose file bind-mounts a `.env` from this
+directory into the container at `/app/.env` (read-only) — the path where
+argus reads it at startup. Secrets never appear in `docker inspect`.
+
 ```bash
 cd argus
 
-# set the bearer token(s) callers will use (comma-separated for multiple)
-export ARGUS_API_TOKENS=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
+# 1. copy the template and set a strong bearer token (comma-separated for multiple/rotation)
+cp .env.example .env    # do this BEFORE the first up — see note below
+#    generate one: python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+#    then edit .env: ARGUS_API_TOKENS=<your token>  (and ARGUS_AI_* if using the AI fallback)
 
+# 2. build & start (reads .env automatically)
 docker compose up --build -d
 
 # readiness
 curl http://localhost:8000/health
 ```
+
+> **Create `.env` before the first `up`.** A missing file makes Docker create an
+> empty *directory* at the mount path, which crashes the app with a confusing
+> error instead of a clear "file not found".
+
+Config edits apply on **restart**, not live — argus reads `.env` once at boot:
+`docker compose restart argus`.
+
+If `ARGUS_API_TOKENS` is left empty, the container still boots but every `/v1/*`
+call rejects with 403 (fail-closed) — set it before going live.
 
 The image is self-contained: it installs the camoufox venv, downloads the
 browser binary at **build** time (so production startup needs no internet), and
@@ -212,6 +229,12 @@ docker run -d --name argus \
   -e ARGUS_API_TOKENS=your-token \
   argus
 ```
+
+### QNAP NAS
+
+For running on a QNAP NAS via Container Station (architecture detection, build
+strategy, reverse proxy for HTTPS, autostart, and NAS-specific troubleshooting):
+see [`docs/deploy-qnap.md`](docs/deploy-qnap.md).
 
 ### Configuration (env vars)
 

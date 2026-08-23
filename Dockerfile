@@ -50,7 +50,7 @@ RUN python -m venv /opt/argus \
     && /opt/argus/bin/pip install --no-cache-dir --upgrade pip \
     && /opt/argus/bin/pip install --no-cache-dir \
         "camoufox==0.5.4" "fastapi>=0.115" "uvicorn[standard]>=0.30" \
-        "pydantic>=2.7" "pydantic-settings>=2.3" \
+        "pydantic>=2.7" "pydantic-settings>=2.3" "httpx>=0.27" \
     && /opt/argus/bin/camoufox fetch \
     # The fetched bundle carries font sets for all three fingerprint OSes it
     # can emulate (macos 569M + windows 322M + linux 41M). The image runs with
@@ -60,6 +60,9 @@ RUN python -m venv /opt/argus \
     && rm -rf /root/.cache/camoufox/browsers/official/*/fonts/windows
 
 # Install argus itself (changes often, light, no-deps so the layer above is reused).
+# pyproject.toml declares `license = { file = "LICENSE" }` and `readme = "README.md"`,
+# so both files must exist in /app for hatchling's metadata validation at wheel build.
+COPY LICENSE README.md ./
 COPY src ./src
 RUN /opt/argus/bin/pip install --no-cache-dir --no-deps .
 

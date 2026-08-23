@@ -1,15 +1,25 @@
+# Argus — Docker Compose with bind-mounted .env configuration.
+#
+# All ARGUS_* configuration is read from a .env file next to this compose file,
+# bind-mounted read-only into the container at /app/.env — the path where
+# pydantic-settings looks at startup (src/argus/config.py; WORKDIR /app):
+#   cp .env.example .env   # then edit: set ARGUS_API_TOKENS, and ARGUS_AI_* if using the AI fallback
+#
+# Edits apply on restart — Settings are built once at boot, not per request:
+#   docker compose restart argus
+#
+# NOTE: create .env BEFORE the first `up`. A missing file makes Docker create
+# an empty DIRECTORY at the mount path (both sides), which crashes the app at
+# startup with a confusing error.
+#
+# If ARGUS_API_TOKENS is empty/unset, the container still boots but every
+# /v1/* call rejects with 403 (fail-closed) — set a strong token before going live.
 services:
   argus:
     build: .
     restart: unless-stopped
-    environment:
-      ARGUS_API_TOKENS: ${ARGUS_API_TOKENS:-change-me}
-      ARGUS_AUTH_DISABLED: ${ARGUS_AUTH_DISABLED:-false}
-      ARGUS_CONCURRENCY: ${ARGUS_CONCURRENCY:-5}
-      ARGUS_IDLE_TIMEOUT_SECONDS: ${ARGUS_IDLE_TIMEOUT_SECONDS:-300}
-      ARGUS_FETCH_TIMEOUT_SECONDS: ${ARGUS_FETCH_TIMEOUT_SECONDS:-35}
-      ARGUS_RENDER_WAIT_SECONDS: ${ARGUS_RENDER_WAIT_SECONDS:-8}
-      ARGUS_DEFAULT_FINGERPRINT_OS: ${ARGUS_DEFAULT_FINGERPRINT_OS:-linux}
+    volumes:
+      - ./.env:/app/.env:ro
     ports:
       - "8000:8000"
     healthcheck:
