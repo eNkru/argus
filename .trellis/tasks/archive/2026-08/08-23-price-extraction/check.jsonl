@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Verification commands (pytest -q, no browser/network); forbidden-patterns table to check against (no module-global mutable state, no raising to caller on fetch path, no per-retailer branching, no f-strings in logs)"}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "Secrets rules — ARGUS_AI_API_KEY must never be logged (log 'configured'/'not configured' only); key=value lazy %s formatting"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Closed-Literal reason sets in schemas.py — adding 'extraction_failed' is an API contract change; never-throw contract; cleanup in finally"}
+{"file": "docs/api-spec.md", "reason": "Contract that must be updated: add /v1/extract-price path + ExtractPriceRequest/ResponseOk/ResponseFail schemas + the extraction_failed reason"}
+{"file": "src/argus/routes/fetch.py", "reason": "Refactor must leave /v1/fetch behavior bit-identical — existing fetch/signature tests assert exact response contracts and must still pass"}
