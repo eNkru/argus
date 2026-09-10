@@ -100,3 +100,31 @@ acceptance criteria each child inherits:
 - Each child is started/archived independently; the parent is archived last
   after the integration review above passes.
 - The audit itself was read-only and produced no code; findings live above.
+
+## Follow-up (next session) — 2026-09-09 checkpoint
+
+Session 2026-09-09 implemented and archived **3 of 7** children on branch
+`security-hardening` (PR base `main`). All default-secure, all verified with
+`pytest` (119 green: 85 pre-existing unchanged + 34 new), nothing broke:
+
+| # | Child | Commit | Status |
+|---|---|---|---|
+| 1 | `ssrf-blocklist` | `b4edb0c` | archived |
+| 3 | `prod-docs-toggle` | `cb6564e` | archived |
+| 7 | `dev-token-hygiene` | `c49a910` | archived |
+
+Remaining **4 children** stay in `planning` as follow-up. Recommended resume
+order + verification notes:
+
+| # | Child | Risk | Verification |
+|---|---|---|---|
+| 6 | `ai-trust-boundary` | low | `pytest`-verifiable; spec doc + optional `ARGUS_AI_EXTRACT_DOMAIN_ALLOWLIST` (default `""` = no change). **Start here.** |
+| 4 | `inbound-rate-limiting` | medium | complex — new `ratelimit.py` + `main.py` middleware, default OFF; `pytest`-verifiable. Reuses the module-scope `_settings` that `prod-docs-toggle` introduced. |
+| 5 | `dependency-lockfile-audit` | medium | `pip-compile` + `pip-audit` runnable offline; **the Dockerfile install-line change needs `docker compose build` to verify** — do not ship blind. |
+| 2 | `container-hardening` | medium | Dockerfile non-root user + drop `wget` + healthcheck switch; **needs `docker compose build && docker compose up` + `docker compose exec argus id` to verify — cannot be proven without Docker.** Defer until Docker is available. |
+
+To resume: `python3 ./.trellis/scripts/task.py start 09-09-ai-trust-boundary`
+(or whichever child), branch already `security-hardening`. Do NOT implement #5
+or #2 without a working `docker` to run the build/up verification gate — the
+parent's bottom line is "don't break anything," and a blind Dockerfile change
+violates it.
