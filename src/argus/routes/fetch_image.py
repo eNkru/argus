@@ -25,6 +25,7 @@ from ..auth import require_token
 from ..browser import BrowserManager
 from ..cookies import to_playwright_cookies
 from ..diagnostics import FailureTracker
+from ..urlguard import guard_url
 from ..schemas import (
     FetchImageRequest,
     FetchImageResponseFail,
@@ -40,6 +41,8 @@ router = APIRouter(prefix="/v1", dependencies=[Depends(require_token)])
 async def fetch_image(request: FetchImageRequest, req: Request):
     browser_manager: BrowserManager = req.app.state.browser_manager
     tracker: FailureTracker = req.app.state.failure_tracker
+    if guard_url(request.url, req.app.state.settings):
+        return FetchImageResponseFail(reason="fetch_failed")
     browser_manager.begin_fetch()
     try:
         return await _do_fetch_image(request, browser_manager, tracker)

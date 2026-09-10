@@ -19,6 +19,7 @@ This directory contains guidelines for backend development. Fill in each file wi
 | [Error Handling](./error-handling.md) | Never-throw contract, failure responses, cleanup patterns | ✅ Filled |
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, testing requirements, forbidden patterns | ✅ Filled |
 | [Logging Guidelines](./logging-guidelines.md) | key=value logging, secrets rules, log levels | ✅ Filled |
+| [Security Guidelines](./security-guidelines.md) | SSRF fetch-target blocklist, secure defaults | ✅ Filled |
 
 ---
 

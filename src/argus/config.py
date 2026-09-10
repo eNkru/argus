@@ -39,6 +39,14 @@ class Settings(BaseSettings):
     # Post-domcontentloaded SPA render-wait cap, seconds.
     render_wait_seconds: float = 8.0
 
+    # SSRF guard: block fetched URLs whose host is private / loopback /
+    # link-local / cloud-metadata (169.254.169.254, 127.0.0.1, RFC1918,
+    # localhost, metadata.google.internal, ...). Default true (block) — the
+    # secure default; a fetch service must not be an SSRF proxy. Operators who
+    # legitimately scrape internal hosts set ARGUS_FETCH_ALLOW_PRIVATE=true to
+    # bypass the guard entirely (escape hatch). See urlguard.py.
+    fetch_allow_private: bool = False
+
     # Camoufox fingerprint OS. Pin to the OS whose fonts are physically present
     # in the image (linux under the provided Dockerfile which prunes macos/windows).
     default_fingerprint_os: str = "linux"

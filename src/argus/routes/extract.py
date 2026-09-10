@@ -33,6 +33,7 @@ from ..auth import require_token
 from ..browser import BrowserManager
 from ..diagnostics import FailureTracker
 from ..navigate import HtmlBlocked, HtmlFailed, HtmlOk, fetch_html
+from ..urlguard import guard_url
 from ..schemas import (
     ExtractPriceRequest,
     ExtractPriceResponseFail,
@@ -48,6 +49,8 @@ router = APIRouter(prefix="/v1", dependencies=[Depends(require_token)])
 async def extract_price(request: ExtractPriceRequest, req: Request):
     browser_manager: BrowserManager = req.app.state.browser_manager
     tracker: FailureTracker = req.app.state.failure_tracker
+    if guard_url(request.url, req.app.state.settings):
+        return ExtractPriceResponseFail(reason="fetch_failed")
     browser_manager.begin_fetch()
     try:
         return await _do_extract(request, browser_manager, tracker, req)
