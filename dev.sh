@@ -94,5 +94,9 @@ echo "  Health:  curl http://localhost:$PORT/health"
 echo "────────────────────────────────────────────────────────────────────"
 echo
 
+# Local dev keeps the interactive API docs at /docs (the README references
+# them). Production defaults ARGUS_DOCS_ENABLED to false (off) — see main.py.
+export ARGUS_DOCS_ENABLED=true
+
 # exec so Ctrl-C reaches uvicorn directly and signals propagate cleanly.
 exec "$UVICORN" argus.main:app --reload --port "$PORT"

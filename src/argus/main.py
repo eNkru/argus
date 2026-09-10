@@ -26,10 +26,24 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
 
+# Settings are constructed once at module scope (not re-parsed per request, and
+# not re-constructed in the lifespan) so both the FastAPI() docs kwargs and the
+# lifespan-mounted app.state share one source of truth. Reading env at import is
+# identical to reading it at lifespan-start for a single process.
+_settings = Settings()
+
+# Interactive API docs are off by default (production-safe). dev.sh exports
+# ARGUS_DOCS_ENABLED=true to keep /docs locally.
+_docs_kwargs = (
+    {}
+    if _settings.docs_enabled
+    else {"docs_url": None, "redoc_url": None, "openapi_url": None}
+)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    settings = Settings()
+    settings = _settings
     app.state.settings = settings
     app.state.browser_manager = BrowserManager(settings)
     app.state.failure_tracker = FailureTracker()
@@ -46,7 +60,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             await app.state.ai_client.aclose()
 
 
-app = FastAPI(title="Argus", lifespan=lifespan)
+app = FastAPI(title="Argus", lifespan=lifespan, **_docs_kwargs)
 app.include_router(health.router)
 app.include_router(fetch.router)
 app.include_router(extract.router)

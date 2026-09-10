@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     # Bypass bearer auth entirely (local dev only).
     auth_disabled: bool = False
 
+    # Interactive API docs (/docs /redoc /openapi.json). Default false (off in
+    # production — the schema documents every endpoint + the auth scheme and
+    # must not be public). dev.sh sets ARGUS_DOCS_ENABLED=true so local dev
+    # keeps /docs (the README references it).
+    docs_enabled: bool = False
+
     # Shared browser concurrency (asyncio semaphore bounding concurrent fetches).
     concurrency: int = 5
 
