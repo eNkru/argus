@@ -188,3 +188,40 @@ tests/test_ai.py             (18 new tests, mocked httpx)
 ### Next Steps
 
 - None - task complete
+
+
+## Session 2: Security hardening: 3/7 findings fixed (SSRF, docs, dev-token)
+
+**Date**: 2026-09-10
+**Task**: Security hardening: 3/7 findings fixed (SSRF, docs, dev-token)
+**Branch**: `security-hardening`
+
+### Summary
+
+Read-only audit found 7 security findings; planned a 1-parent + 7-child Trellis tree on branch security-hardening. Implemented + archived 3 fully-verifiable, default-secure children without breaking any existing behavior (pytest: 85 pre-existing unchanged, 119 total green): #1 SSRF fetch-target blocklist (new urlguard.py wired into all 3 fetch routes before begin_fetch; blocks 169.254.169.254/loopback/RFC1918/metadata hostnames; ARGUS_FETCH_ALLOW_PRIVATE escape hatch, default off; maps to existing fetch_failed contract = zero contract change), #3 docs gated behind ARGUS_DOCS_ENABLED (default off; dev.sh keeps /docs locally; main.py gains a module-scope _settings reused later by rate-limiting), #7 dev.sh no longer echoes the bearer token. Remaining 4 children (ai-trust-boundary, inbound-rate-limiting, dependency-lockfile-audit, container-hardening) left in planning as follow-up; #5/#2 need a working docker to verify the image build/non-root user and must not be done blind per the 'don't break anything' bottom line.
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `01fd9e1` | (see git log) |
+| `b4edb0c` | (see git log) |
+| `cb6564e` | (see git log) |
+| `c49a910` | (see git log) |
+| `745f2b0` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
