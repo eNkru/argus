@@ -88,7 +88,7 @@ fi
 echo
 echo "────────────────────────────────────────────────────────────────────"
 echo "  Argus dev server → http://localhost:$PORT  (reload on file change)"
-echo "  Bearer token (for /v1/* curl): $TOKEN"
+echo "  Bearer token: in .env (ARGUS_API_TOKENS) — view with: grep ARGUS_API_TOKENS .env"
 echo "  Docs:    http://localhost:$PORT/docs"
 echo "  Health:  curl http://localhost:$PORT/health"
 echo "────────────────────────────────────────────────────────────────────"
