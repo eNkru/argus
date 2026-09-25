@@ -35,8 +35,15 @@ RUN apt-get update \
         libxrandr2 \
         libxshmfence1 \
         libxt6 \
-        wget \
     && rm -rf /var/lib/apt/lists/*
+
+# Non-root runtime user. Build steps below run as root (venv install + camoufox
+# fetch need write access); only the runtime CMD runs as `argus`. HOME points at
+# the user's home dir so the camoufox browser cache lands under
+# /home/argus/.cache — readable at runtime instead of stranded in /root.
+RUN groupadd --gid 1000 argus \
+    && useradd --uid 1000 --gid argus --create-home --home-dir /home/argus --shell /usr/sbin/nologin argus
+ENV HOME=/home/argus
 
 WORKDIR /app
 
@@ -57,8 +64,8 @@ RUN python -m venv /opt/argus \
     # can emulate (macos 569M + windows 322M + linux 41M). The image runs with
     # the linux fingerprint pinned, so prune the macos/windows TTCs — dead
     # weight that gzip poorly.
-    && rm -rf /root/.cache/camoufox/browsers/official/*/fonts/macos \
-    && rm -rf /root/.cache/camoufox/browsers/official/*/fonts/windows
+    && rm -rf /home/argus/.cache/camoufox/browsers/official/*/fonts/macos \
+    && rm -rf /home/argus/.cache/camoufox/browsers/official/*/fonts/windows
 
 # Install argus itself (changes often, light, no-deps so the layer above is reused).
 # pyproject.toml declares `license = { file = "LICENSE" }` and `readme = "README.md"`,
@@ -67,7 +74,13 @@ COPY LICENSE README.md ./
 COPY src ./src
 RUN /opt/argus/bin/pip install --no-cache-dir --no-deps .
 
+# Hand the venv and fetched browser cache to the runtime user — the build RUNs
+# above ran as root, but the runtime CMD below runs as argus and needs to read
+# the venv (bin/uvicorn) and execute the browser binary out of the cache.
+RUN chown -R argus:argus /opt/argus /home/argus
+
 ENV PATH="/opt/argus/bin:${PATH}"
 
 EXPOSE 8000
+USER argus
 CMD ["uvicorn", "argus.main:app", "--host", "0.0.0.0", "--port", "8000"]

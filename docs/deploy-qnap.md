@@ -125,7 +125,7 @@ services:
           memory: 2G           # raise to 3-4G if you raise ARGUS_CONCURRENCY above 2
           cpus: "2.0"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/health >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; urllib.request.urlopen('http://localhost:8000/health', timeout=4); sys.exit(0)\" || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 5
@@ -307,7 +307,7 @@ Old containers/images: `docker image prune -f` to reclaim the ~1.5 GB.
 | Build fails at `camoufox fetch` (404 / no matching build) | No Camoufox build for your CPU arch | Confirm `uname -m`; switch to an x86_64 NAS or an x86_64 side host. See §1a. |
 | Container starts, `/health` ok, but every `/v1/fetch` returns `{ok:false,reason:"fetch_failed"}` | Browser launch failing — usually OOM or missing GL libs | Check `docker logs argus` for the launch error; raise the `memory:` limit; verify the image wasn't stripped of `libgbm1`/`libnss3` (use the provided Dockerfile unmodified). |
 | Container exits with code 137 (OOMKilled) | NAS ran out of RAM under concurrency | Lower `ARGUS_CONCURRENCY` to 1; raise the `memory:` limit; check what else is running on the NAS. |
-| `wget` healthcheck fails forever, `start_period` too short | Slow NAS CPU launching the browser | It's normal for `/health` to pass immediately (it doesn't launch the browser); if it fails, the container itself isn't up — check `docker logs`. |
+| Python healthcheck fails forever, `start_period` too short | Slow NAS CPU launching the browser | It's normal for `/health` to pass immediately (it doesn't launch the browser); if it fails, the container itself isn't up — check `docker logs`. |
 | First fetch after boot is slow (5–15s) | Lazy browser launch — by design | Expected. Subsequent fetches within the idle window reuse the warm browser. |
 | Antidetect sites still 403 | `ARGUS_DEFAULT_FINGERPRINT_OS` set to something other than `linux` | Keep it `linux`: the image prunes macos/windows fonts, so a non-linux fingerprint that names missing fonts is itself a tell. |
 | `curl: (56) Recv failure` from outside the LAN | Port 8000 not exposed or firewall blocking | Confirm the port mapping in §3 and the NAS firewall (Network & File Services → Telnet/SSH/HTTP). Use the reverse proxy in §5 for external access. |
