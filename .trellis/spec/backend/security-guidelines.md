@@ -41,3 +41,37 @@ hostname like `internal-svc` that resolves to a private IP is not blocked
 without DNS resolution. The literal-host guard closes the highest-severity
 hole (IP literals + known metadata hostnames); full DNS-rebinding protection
 is future work.
+
+---
+
+## Container — non-root runtime user, no network utilities
+
+The image runs the uvicorn + Camoufox process tree as a **non-root user**
+(`argus`, uid/gid 1000). A browser or Playwright compromise therefore lands as
+an unprivileged user, not root (2026-09 hardening, finding #2).
+
+- `Dockerfile` creates `argus` with `--create-home --home-dir /home/argus` and
+  sets `ENV HOME=/home/argus` **before** the `camoufox fetch` layer, so the
+  browser cache lands in `/home/argus/.cache/camoufox/browsers/official/*/` —
+  owned by the runtime user instead of stranded in `/root`.
+- All build `RUN`s stay root (venv creation, lockfile install, browser fetch,
+  `pip install --no-deps .`); `chown -R argus:argus /opt/argus /home/argus`
+  runs once after installs; `USER argus` sits directly before `CMD`.
+- The macos/windows font prune paths MUST match `HOME` — they live under
+  `/home/argus/.cache/...`. If `HOME` ever moves again, move the prune paths
+  with it (keep the prune: it trims ~900MB of dead-weight fonts).
+- **Healthcheck is Python, not wget**: the compose probe is
+  `python -c "import urllib.request,sys; urllib.request.urlopen('http://localhost:8000/health', timeout=4); sys.exit(0)"`
+  — the venv interpreter (PATH already includes `/opt/argus/bin`). `wget` was
+  removed from the apt list; **do not re-add it** and do not introduce other
+  network utilities (curl, netcat) into the image — the browser is the only
+  outbound client that matters and it ships its own network stack.
+
+**Forbidden:**
+- Running the container as root (adding work after `USER argus`, or reordering
+  so `CMD` precedes the user switch).
+- Editing the Dockerfile without re-verifying `docker compose up` reaches
+  `healthy` AND `docker compose exec argus id` shows `uid=1000(argus)` — a
+  root-running or broken-permission image otherwise ships silently.
+- Removing GTK/NSS/X11 apt libs (Camoufox needs them) or `build-essential`
+  (needed for wheel compilation at pip-install stage).
