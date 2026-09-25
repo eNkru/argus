@@ -162,7 +162,8 @@ automatically (see `.env.example` for all `ARGUS_*` vars).
 
 ```bash
 source .venv/bin/activate
-pytest                      # 37 unit tests: auth, schemas, cookies, signatures, health
+pytest                      # 119 unit tests: auth, schemas, cookies, signatures, health
+./scripts/audit.sh          # supply-chain gate: pip-audit -r requirements.lock (exit 0)
 ```
 
 The unit tests cover the pure modules — they do **not** need the camoufox
