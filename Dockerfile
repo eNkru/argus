@@ -40,17 +40,18 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY pyproject.toml ./
+COPY pyproject.toml requirements.lock ./
 
-# Install dependencies (incl. camoufox) and fetch the browser binary in a
-# cacheable layer — this is the heavy step (~browser download) and changes
-# rarely. Keep this dep list in sync with pyproject.toml [project].dependencies;
-# argus itself is installed --no-deps below so code changes don't bust this layer.
+# Install dependencies (incl. camoufox) from the lockfile and fetch the browser
+# binary in a cacheable layer — this is the heavy step (~browser download) and
+# changes rarely. requirements.lock pins the full transitive runtime set (the
+# set verified clean by pip-audit in the 2026-09 security-hardening pass);
+# pyproject.toml [project].dependencies remains the source of truth for edits,
+# and the lockfile is regenerated from it. argus itself is installed --no-deps
+# below so code changes don't bust this layer.
 RUN python -m venv /opt/argus \
     && /opt/argus/bin/pip install --no-cache-dir --upgrade pip \
-    && /opt/argus/bin/pip install --no-cache-dir \
-        "camoufox==0.5.4" "fastapi>=0.115" "uvicorn[standard]>=0.30" \
-        "pydantic>=2.7" "pydantic-settings>=2.3" "httpx>=0.27" \
+    && /opt/argus/bin/pip install --no-cache-dir -r requirements.lock \
     && /opt/argus/bin/camoufox fetch \
     # The fetched bundle carries font sets for all three fingerprint OSes it
     # can emulate (macos 569M + windows 322M + linux 41M). The image runs with

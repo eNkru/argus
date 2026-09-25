@@ -8,7 +8,8 @@
 
 ```bash
 source .venv/bin/activate
-pytest          # full suite (37 tests) — must pass; no browser binary or network needed
+pytest                # full suite (119 tests) — must pass; no browser binary or network needed
+./scripts/audit.sh    # supply-chain gate: pip-audit -r requirements.lock — must exit 0
 ```
 
 There is no linter/formatter configured. If one is added, wire it here and into CI before enforcing it.
@@ -23,7 +24,7 @@ There is no linter/formatter configured. If one is added, wire it here and into 
 - **Module docstrings explain *why***, not just what — reference real incidents/dates where the behavior was proven live (see `signatures.py` Cloudflare notes: "confirmed pbtech PDP 2026-08-04").
 - **Deliberate broad catches** carry `# noqa: BLE001 — <reason>` (see error-handling.md).
 - **Playwright async API only** — no sync Playwright, no Playwright Chromium; Camoufox is the only engine (`AsyncCamoufox` from `camoufox.async_api`).
-- **Dependency pins**: `camoufox==0.5.4` is pinned to the browser build that passed the anti-bot spike; bump deliberately and re-run the pass-rate matrix (comment in `pyproject.toml`).
+- **Dependency pins & lockfile**: `pyproject.toml` `[project].dependencies` is the source of truth for *edits*; `requirements.lock` (regenerated via `pip-compile --generate-hashes`, committed to the repo) is the source of truth for the *Docker build* — never hand-edit lockfile pins. `camoufox==0.5.4` is pinned to the browser build that passed the anti-bot spike; bump deliberately and re-run the pass-rate matrix (comment in `pyproject.toml`). The lockfile is runtime-only — dev extras (`pytest`, `pip-audit`) are intentionally absent. The image installs via `pip install -r requirements.lock`, which auto-enables `--require-hashes` (pip does this when hashes are present) → free wheel-integrity verification. After any dependency change, regenerate the lockfile and re-run `./scripts/audit.sh`.
 
 ---
 
@@ -59,3 +60,6 @@ There is no linter/formatter configured. If one is added, wire it here and into 
 - Reusing a `BrowserContext` across requests — every fetch gets a fresh context, closed in `finally`.
 - Treating `challenges.cloudflare.com` in HTML as a guaranteed block — real PDPs embed Turnstile; size-capped shell detection only (see `signatures.py`).
 - Forgetting `browser_manager.begin_fetch()` / `end_fetch()` pairing (finally!) around new fetch entry points — it gates idle teardown.
+- Editing `pyproject.toml` deps without regenerating `requirements.lock` + running `./scripts/audit.sh` — the Docker build diverges from the local env and the supply-chain gate goes stale.
+- Re-resolving the lockfile during audit (running `pip-audit -r requirements.lock` *without* `--disable-pip`, as `scripts/audit.sh` uses) — on a macOS dev host this pulls `screeninfo`'s darwin-only `pyobjc`/`Cython` (not in the Linux-targeted lockfile) and, because the file carries hashes, trips `--require-hashes`. Audit the pinned list as-is; the lockfile is already the fully-resolved closure.
+- Bumping a lockfile version to clear a `pip-audit` vuln without triage — a non-zero audit is a decision, not a bump (`camoufox` especially is a browser-build contract; re-run the pass-rate matrix).
