@@ -259,3 +259,37 @@ Completed security-hardening Finding #5: generated requirements.lock (pip-compil
 ### Next Steps
 
 - None - task complete
+
+
+## Session 4: Container hardening — non-root user, drop wget (Finding #2)
+
+**Date**: 2026-09-25
+**Task**: Container hardening — non-root user, drop wget (Finding #2)
+**Branch**: `main`
+
+### Summary
+
+Completed security-hardening Finding #2: image now runs uvicorn+Camoufox as non-root argus (uid/gid 1000, USER argus before CMD); HOME=/home/argus so the camoufox browser cache is user-owned (font-prune paths moved to match); venv + cache chowned to argus; wget removed from the image and the compose healthcheck switched to a venv-python urllib probe. Live-verified: build ok, healthcheck healthy, exec id uid=1000(argus), which wget not found, browser binary readable, font prune intact; pytest 119 green, pip-audit clean, zero Python change. Also fixed 2 stale wget references in docs/deploy-qnap.md and captured the container invariants in backend/security-guidelines.md.
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f71884e` | (see git log) |
+| `ce58346` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
