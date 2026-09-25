@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Primary check spec: pytest -q green (no code change), camoufox==0.5.4 pin intact, no forbidden patterns introduced; verification command documented here."}
+{"file": ".trellis/spec/backend/security-guidelines.md", "reason": "Finding #5 supply-chain posture — confirm the pip-audit gate enforces secure defaults and no runtime security regression; lockfile install must not weaken the SSRF fetch-path contract."}
