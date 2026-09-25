@@ -225,3 +225,37 @@ Read-only audit found 7 security findings; planned a 1-parent + 7-child Trellis 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 3: Dependency lockfile + pip-audit CI gate (Finding #5)
+
+**Date**: 2026-09-25
+**Task**: Dependency lockfile + pip-audit CI gate (Finding #5)
+**Branch**: `main`
+
+### Summary
+
+Completed security-hardening Finding #5: generated requirements.lock (pip-compile --generate-hashes) from the audit-verified installed set with zero version bumps (camoufox==0.5.4 intact), built the Docker image from the lockfile, and added scripts/audit.sh (pip-audit --disable-pip) as a must-pass supply-chain gate. pytest green, pip-audit clean, docker build healthy. Merged via PR #2.
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3c3ebc0` | (see git log) |
+| `1152853` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
