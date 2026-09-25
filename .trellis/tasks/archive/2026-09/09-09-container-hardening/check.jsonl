@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Verification commands to run post-check: pytest must stay green, ./scripts/audit.sh must exit 0; confirm no lockfile/pyproject drift"}
+{"file": ".trellis/spec/backend/security-guidelines.md", "reason": "Check the hardening goal holds: USER non-root before CMD, wget absent, healthcheck no longer depends on wget"}

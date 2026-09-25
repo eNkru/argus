@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Verification commands (pytest, ./scripts/audit.sh), dependency/lockfile invariants — Dockerfile edits must not break the lockfile install shape added by dependency-lockfile-audit"}
+{"file": ".trellis/spec/backend/security-guidelines.md", "reason": "Hardening invariants context — container runs as non-root, no source-code change outside Dockerfile/docker-compose.yml"}
