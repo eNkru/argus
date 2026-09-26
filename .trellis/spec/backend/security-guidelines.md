@@ -75,3 +75,42 @@ an unprivileged user, not root (2026-09 hardening, finding #2).
   root-running or broken-permission image otherwise ships silently.
 - Removing GTK/NSS/X11 apt libs (Camoufox needs them) or `build-essential`
   (needed for wheel compilation at pip-install stage).
+
+---
+
+## Inbound request rate limiting — per-IP fixed window
+
+`ratelimit.RateLimitMiddleware` wraps the whole app via `app.add_middleware`
+(in `main.py`), so it runs **before** `auth.require_token` — the 401
+bearer-token brute-force path is throttled exactly like any other `/v1/*`
+request, and once authenticated, an abusive caller is bounded too.
+
+- **Default OFF.** `Settings.rate_limit_enabled` defaults `False`, so behavior
+  is byte-identical until an operator sets `ARGUS_RATE_LIMIT_ENABLED=true`
+  (secure, opt-in default). When disabled the middleware is a pass-through
+  with no per-request work.
+- **Generous defaults.** `rate_limit_requests=600` per `rate_limit_window_s=60`
+  seconds per client IP — a single legit caller at 1 req/s (60/min) never trips
+  it; it exists to dampen brute-force / recon abuse, not to meter fair use.
+- **`/health` is exempt** — the compose readiness probe polls every 15s and must
+  never be throttled.
+- **Over-limit → 429** with `Retry-After` (remaining window seconds) and an INFO
+  log (`ip=%s requests=%d window=%d path=%s`), a transport-level rejection — not
+  a `{ok:false,...}` fetch-contract body (consistent with FastAPI's own 401/422).
+- **Single-process, in-memory, no new dependency.** State is one `dict` keyed by
+  `request.client.host` with `time.monotonic()` fixed windows, mirroring
+  `ai.py`'s lean-deps throttle. No `slowapi`, no Redis/external store.
+
+**Known limitation (deferred, not a bug):** the limiter is per-process. If argus
+moves behind multiple uvicorn workers or a load balancer, each worker gets its
+own budget (a shared store would be a new runtime dep). Fixed-window (not
+sliding) is also deliberate — sufficient for dampening, not billing-accurate
+fairness.
+
+**Forbidden:**
+- Adding a new `/v1/*` entry point and expecting it to be throttled for free —
+  the middleware covers the whole app, but if you ever add a router _outside_
+  the middleware's scope or re-mount, re-check the throttle applies before auth.
+- Replacing the in-memory limiter with a client lib (`slowapi`) or external
+  store without updating this guideline and the no-new-runtime-dep constraint.
+
