@@ -19,6 +19,7 @@ from .ai import build_ai_client
 from .browser import BrowserManager
 from .config import Settings
 from .diagnostics import FailureTracker
+from .ratelimit import RateLimitMiddleware
 from .routes import extract, fetch, fetch_image, health
 
 logging.basicConfig(
@@ -61,6 +62,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="Argus", lifespan=lifespan, **_docs_kwargs)
+# Rate limiting wraps the whole app (before auth), so the 401 bearer-brute-force
+# path is throttled like any /v1/* request. No-op while rate_limit_enabled=False.
+app.add_middleware(RateLimitMiddleware, settings=_settings)
 app.include_router(health.router)
 app.include_router(fetch.router)
 app.include_router(extract.router)

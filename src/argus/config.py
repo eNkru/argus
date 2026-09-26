@@ -53,6 +53,20 @@ class Settings(BaseSettings):
     # bypass the guard entirely (escape hatch). See urlguard.py.
     fetch_allow_private: bool = False
 
+    # Inbound request rate limiting (security): fixed-window per-IP throttle
+    # applied by ratelimit.RateLimitMiddleware before auth — so the 401
+    # bearer-brute-force path is throttled too. Default OFF (byte-identical
+    # behavior until an operator opts in). When ON, over-limit requests get a
+    # 429 + Retry-After; /health is always exempt. Single-process (in-memory).
+    rate_limit_enabled: bool = False
+
+    # Requests allowed per client IP per window. Generous: a single caller at
+    # 1 req/s is 60/min, well under 600, so legitimate callers never trip it.
+    rate_limit_requests: int = 600
+
+    # Fixed-window length, seconds.
+    rate_limit_window_s: int = 60
+
     # Camoufox fingerprint OS. Pin to the OS whose fonts are physically present
     # in the image (linux under the provided Dockerfile which prunes macos/windows).
     default_fingerprint_os: str = "linux"
