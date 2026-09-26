@@ -80,18 +80,26 @@ acceptance criteria each child inherits:
 
 ## Parent acceptance criteria (final integration review)
 
-- [ ] All 7 children archived.
-- [ ] `pytest` green (37+ tests, count grows with new tests, all pass) with no
-  browser binary or network.
-- [ ] `pip-audit` clean on the locked dependency set.
-- [ ] Docker image builds; `docker compose up` healthcheck passes; container
-  runs as a non-root user; `/docs` returns 404 in prod defaults.
-- [ ] One manual smoke pass: `curl` `/health` (200), `/v1/fetch` with a public
-  URL (unchanged body), `/v1/extract-price` JSON-LD path (unchanged), and an
-  SSRF probe (`http://169.254.169.254/`) returns `{ok:false,reason:"fetch_failed"}`
-  with `ARGUS_FETCH_ALLOW_PRIVATE` unset.
-- [ ] No secret values appear in any new log line or in the diff.
-- [ ] `.trellis/spec/backend/` updated where a child captured a convention
+- [x] All 7 children archived. (2026-09-26: ssrf-blocklist, prod-docs-toggle,
+  dev-token-hygiene, inbound-rate-limiting, dependency-lockfile-audit,
+  container-hardening, ai-trust-boundary — all in `archive/2026-09/`.)
+- [x] `pytest` green — 130 tests, no browser binary or network.
+- [x] `pip-audit` clean on the locked dependency set (`scripts/audit.sh` exit 0).
+- [x] Docker image builds; `docker compose up` healthcheck passes (healthy in
+  ~20s); container runs as non-root (`uid=1000(argus) gid=1000(argus)`);
+  `/docs` returns 404 in prod defaults.
+- [x] One manual smoke pass (2026-09-26, Docker 28.1.1):
+  `/health` → 200; auth path → 401 `{"detail":"missing or non-bearer Authorization header"}`;
+  `/v1/fetch` books.toscrape PDP → unchanged `{ok:true, html:...}` body;
+  `/v1/extract-price` pbtech Ryzen 9800X3D PDP → unchanged full JSON-LD body
+  (`source:"jsonld"`, `price:"861.35"`, `currency:"NZD"`, InStock, full Product node);
+  SSRF probe `http://169.254.169.254/` → `{ok:false,reason:"fetch_failed"}` with
+  `ARGUS_FETCH_ALLOW_PRIVATE` unset. (First smoke used a made-up pbtech slug —
+  404 page + AI-provider 403 both correctly degraded to `extraction_failed`;
+  product URL then taken from pbtech's own products sitemap.)
+- [x] No secret values appear in any new log line or in the diff — full
+  container-log scan for the bearer token + AI API key: zero matches.
+- [x] `.trellis/spec/backend/` updated where a child captured a convention
   (AI-trust boundary; SSRF blocklist invariant).
 
 ## Notes
