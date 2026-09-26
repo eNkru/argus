@@ -361,3 +361,36 @@ Completed the ai-trust-boundary child of 09-09-security-hardening (finding #6, L
 ### Next Steps
 
 - None - task complete
+
+
+## Session 7: Security hardening parent — final integration review + archive
+
+**Date**: 2026-09-26
+**Task**: Security hardening parent — final integration review + archive
+**Branch**: `main`
+
+### Summary
+
+Ran the parent-level integration review for 09-09-security-hardening (all 7 children now archived). Gates: pytest 130 green (no browser/network); pip-audit clean on the locked set; docker compose build + up healthy (~20s); container non-root uid=1000(argus); /docs 404 in prod defaults; /health 200; auth 401 contract unchanged; /v1/fetch public URL unchanged body; /v1/extract-price JSON-LD path verified live on a real pbtech PDP (source=jsonld, full Product node, price 861.35 NZD — URL from pbtech sitemap after a first attempt with a made-up slug hit a 404 + AI-provider 403, both correctly degrading to extraction_failed); SSRF probe 169.254.169.254 → {ok:false,reason:fetch_failed} with ARGUS_FETCH_ALLOW_PRIVATE unset; full container-log scan for bearer token + AI API key: zero matches. Checked off the parent prd.md acceptance checklist with evidence, archived the parent. security-hardening campaign complete: 7/7 findings fixed, nothing broke.
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f5c4922` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

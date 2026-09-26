@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 6
+- **Total Sessions**: 7
 - **Last Active**: 2026-09-26
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~363 | Active |
+| `journal-1.md` | ~396 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 7 | 2026-09-26 | Security hardening parent — final integration review + archive | `f5c4922` | `main` |
 | 6 | 2026-09-26 | AI-extracted price trust boundary (security hardening #6) | `d5c89ea`, `e7e5e40` | `main` |
 | 5 | 2026-09-26 | Inbound request rate limiting (finding #4) | `8900ba7`, `572a1fa` | `main` |
 | 4 | 2026-09-25 | Container hardening — non-root user, drop wget (Finding #2) | `f71884e`, `ce58346` | `main` |
