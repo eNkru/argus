@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/security-guidelines.md", "reason": "R1 target — add the AI-extracted-price trust-boundary section here (file already exists from SSRF/rate-limit children); use existing sections as style template."}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Forbidden per-site-branching pattern + test conventions (R5 fake app.state pattern, make_settings) the allow-list gate must obey."}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "INFO log format for the allow-list skip (R2: lazy %s, no secrets); the 'ai_stage_skipped url=%s reason=host_not_allowlisted' line must follow this."}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "{ok:false} fetch contract + broad-catch BLE001 noqa pattern (R6); AI-skip returns extraction_failed via this contract, never throws."}
