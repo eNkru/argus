@@ -106,7 +106,29 @@ class Settings(BaseSettings):
     # Retry attempts for transient provider errors (429/502/503/504 only).
     ai_max_retries: int = 3
 
+    # Optional retailer-domain allow-list for the AI fallback stage
+    # (ARGUS_AI_EXTRACT_DOMAIN_ALLOWLIST). Comma-separated host suffixes, e.g.
+    # "pbtech.co.nz,kogan.co.nz". Empty (default) = no restriction, so the AI
+    # stage runs exactly as before (byte-identical behavior) — secure, opt-in
+    # default. When non-empty, the AI stage in routes/extract.py runs only if
+    # the fetched page's final hostname matches a listed suffix (exact or
+    # ".suffix" subdomain, case-insensitive); otherwise it degrades to
+    # extraction_failed with an INFO log — no LLM call, no cost. AI-extracted
+    # prices are UNTRUSTED regardless (see security-guidelines.md); this only
+    # scopes which hosts the LLM stage may run on.
+    ai_extract_domain_allowlist: str = ""
+
     @property
     def api_token_set(self) -> set[str]:
         """Valid bearer tokens, whitespace-trimmed, empties dropped."""
         return {t.strip() for t in self.api_tokens.split(",") if t.strip()}
+
+    @property
+    def ai_extract_domain_allowlist_set(self) -> set[str]:
+        """AI-stage host suffixes, whitespace-trimmed + lowercased, empties
+        dropped. Empty set = no restriction (default = "")."""
+        return {
+            s.strip().lower()
+            for s in self.ai_extract_domain_allowlist.split(",")
+            if s.strip()
+        }

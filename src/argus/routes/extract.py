@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, Request
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
@@ -117,6 +118,22 @@ async def _do_extract(
         ai_client = getattr(req.app.state, "ai_client", None)
         extraction: PriceExtraction | None = None
         if request.aiFallback and ai_client is not None:
+            # AI-extracted prices are UNTRUSTED (security-guidelines.md): the
+            # prompt is fed attacker-controlled page content. An operator may
+            # scope the LLM stage to trusted retailer hosts via
+            # ARGUS_AI_EXTRACT_DOMAIN_ALLOWLIST. Empty (default) = no
+            # restriction, byte-identical to pre-allowlist behavior. A
+            # non-matching final host degrades to extraction_failed with an
+            # INFO log — no LLM call, no cost.
+            allowlist = req.app.state.settings.ai_extract_domain_allowlist_set
+            if allowlist:
+                host = (urlparse(result.final_url).hostname or "").lower()
+                if not any(host == s or host.endswith("." + s) for s in allowlist):
+                    logger.info(
+                        "ai_stage_skipped url=%s reason=host_not_allowlisted",
+                        request.url,
+                    )
+                    return ExtractPriceResponseFail(reason="extraction_failed")
             # ai.py never throws: provider errors, retries-exhausted, and
             # schema mismatches all surface here as None.
             extraction = await ai_client.extract_price(result.html, request.url)

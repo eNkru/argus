@@ -309,6 +309,70 @@ def test_extract_ai_none_result_maps_to_extraction_failed() -> None:
     assert response.json()["reason"] == "extraction_failed"
 
 
+def test_extract_ai_allowlist_nonmatching_host_skips_ai() -> None:
+    # ARGUS_AI_EXTRACT_DOMAIN_ALLOWLIST gates the AI stage to trusted hosts
+    # (security-guidelines.md). The default final host example.test is not in
+    # {"pbtech.co.nz"} → the LLM client is never called and the route degrades
+    # to extraction_failed (no LLM call, no cost). The empty-allow-list case
+    # (AI runs exactly as before) is already covered by
+    # test_extract_ai_fallback_returns_source_ai above.
+    from argus.ai import PriceExtraction
+
+    calls: list[tuple[str, str]] = []
+
+    async def fake_extract_price(html: str, url: str) -> PriceExtraction:
+        calls.append((html, url))
+        return PriceExtraction(
+            available=True, price="149.00", currency="NZD", name="would be ai"
+        )
+
+    page = FakePage("<html><body>no structured data here</body></html>")
+    client = _client_for(page)
+    client.app.state.ai_client = SimpleNamespace(extract_price=fake_extract_price)
+    client.app.state.settings.ai_extract_domain_allowlist = "pbtech.co.nz"
+    response = client.post("/v1/extract-price", json=_BASE_BODY, headers=AUTH)
+    assert response.status_code == 200
+    assert response.json()["reason"] == "extraction_failed"
+    assert calls == []  # the LLM client was never invoked
+
+
+def test_extract_ai_allowlist_matching_host_runs_ai() -> None:
+    # A non-empty allow-list must not block matching hosts: the subdomain
+    # suffix match (www.pbtech.co.nz ends with .pbtech.co.nz) lets the AI
+    # stage run and ship source="ai" exactly as the unallowlisted path does.
+    from argus.ai import PriceExtraction
+
+    calls: list[tuple[str, str]] = []
+
+    async def fake_extract_price(html: str, url: str) -> PriceExtraction:
+        calls.append((html, url))
+        return PriceExtraction(
+            available=True, price="149.00", currency="NZD", name="Allowlisted Widget"
+        )
+
+    page = FakePage(
+        "<html><body>no structured data here</body></html>",
+        final_url="https://www.pbtech.co.nz/monitor",
+    )
+    client = _client_for(page)
+    client.app.state.ai_client = SimpleNamespace(extract_price=fake_extract_price)
+    client.app.state.settings.ai_extract_domain_allowlist = "pbtech.co.nz"
+    response = client.post("/v1/extract-price", json=_BASE_BODY, headers=AUTH)
+    assert response.status_code == 200
+    assert response.json() == {
+        "ok": True,
+        "source": "ai",
+        "url": "https://www.pbtech.co.nz/monitor",
+        "available": True,
+        "price": "149.00",
+        "currency": "NZD",
+        "availability": None,
+        "name": "Allowlisted Widget",
+        "jsonld": None,
+    }
+    assert len(calls) == 1  # the LLM client was invoked once
+
+
 def test_failure_tracker_hit_counts_as_success() -> None:
     # White-box: the degradation trend reads consecutive failures; a completed
     # extraction must leave the counter at zero.
