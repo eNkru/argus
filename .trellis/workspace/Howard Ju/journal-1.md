@@ -327,3 +327,37 @@ Implemented per-IP fixed-window inbound rate limiting (default off, no new dep):
 ### Next Steps
 
 - None - task complete
+
+
+## Session 6: AI-extracted price trust boundary (security hardening #6)
+
+**Date**: 2026-09-26
+**Task**: AI-extracted price trust boundary (security hardening #6)
+**Branch**: `main`
+
+### Summary
+
+Completed the ai-trust-boundary child of 09-09-security-hardening (finding #6, Low). Wrote the real fix in security-guidelines.md: AI-extracted prices (source="ai") are UNTRUSTED (prompt-injection/data-integrity surface), JSON-LD is the trusted path, and _ParsedExtraction is the schema-containment invariant (do not relax, never extend LLM output shape). Added the optional ARGUS_AI_EXTRACT_DOMAIN_ALLOWLIST (default empty = byte-identical behavior) that gates the AI fallback stage to trusted retailer host suffixes; a non-matching final host degrades to extraction_failed with an INFO log (no LLM call). urllib.parse stdlib only, no new dep. trellis-check PASS; 130 tests green (+2). Parent security-hardening now 7/7 children done — eligible for the final integration review + parent archive.
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d5c89ea` | (see git log) |
+| `e7e5e40` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
