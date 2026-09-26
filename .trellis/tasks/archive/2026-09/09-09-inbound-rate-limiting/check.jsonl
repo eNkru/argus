@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Verify offline test discipline and no new runtime dependency (R5)"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Verify 429 + Retry-After + pass-through shape against the error-handling contract"}
+{"file": ".trellis/spec/backend/security-guidelines.md", "reason": "Verify default-OFF opt-in and single-process limitation are correctly documented"}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "Verify INFO log fields match logging conventions"}

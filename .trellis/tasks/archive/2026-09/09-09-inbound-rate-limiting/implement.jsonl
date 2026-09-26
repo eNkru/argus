@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend spec index: package layout and authoritative pointer to layer guidelines"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Test conventions: offline unit tests, no camoufox/browser in tests, fake-app pattern"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "429 response shape / error-handling contract for the rate-limit rejection path"}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "INFO log format for the over-limit branch (ip/requests/window/path)"}
+{"file": ".trellis/spec/backend/security-guidelines.md", "reason": "Security hardening context; this task is finding #4 of the parent audit"}
