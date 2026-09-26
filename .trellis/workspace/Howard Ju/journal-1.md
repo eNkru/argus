@@ -293,3 +293,37 @@ Completed security-hardening Finding #2: image now runs uvicorn+Camoufox as non-
 ### Next Steps
 
 - None - task complete
+
+
+## Session 5: Inbound request rate limiting (finding #4)
+
+**Date**: 2026-09-26
+**Task**: Inbound request rate limiting (finding #4)
+**Branch**: `main`
+
+### Summary
+
+Implemented per-IP fixed-window inbound rate limiting (default off, no new dep): src/argus/ratelimit.py (_WindowCounter + RateLimitMiddleware), 3 rate_limit_* settings, main.py wiring, 9 offline tests, .env.example docs, and security-guidelines spec section. 128 tests pass.
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8900ba7` | (see git log) |
+| `572a1fa` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

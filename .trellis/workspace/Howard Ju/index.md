@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 4
-- **Last Active**: 2026-09-25
+- **Total Sessions**: 5
+- **Last Active**: 2026-09-26
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~295 | Active |
+| `journal-1.md` | ~329 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 5 | 2026-09-26 | Inbound request rate limiting (finding #4) | `8900ba7`, `572a1fa` | `main` |
 | 4 | 2026-09-25 | Container hardening — non-root user, drop wget (Finding #2) | `f71884e`, `ce58346` | `main` |
 | 3 | 2026-09-25 | Dependency lockfile + pip-audit CI gate (Finding #5) | `3c3ebc0`, `1152853` | `main` |
 | 2 | 2026-09-10 | Security hardening: 3/7 findings fixed (SSRF, docs, dev-token) | `01fd9e1`, `b4edb0c`, `cb6564e`, `c49a910`, `745f2b0` | `security-hardening` |
