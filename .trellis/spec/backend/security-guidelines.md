@@ -114,3 +114,57 @@ fairness.
 - Replacing the in-memory limiter with a client lib (`slowapi`) or external
   store without updating this guideline and the no-new-runtime-dep constraint.
 
+---
+
+## AI-extracted price — untrusted, schema-contained
+
+`/v1/extract-price` has two stages: a **deterministic** JSON-LD parse
+(`jsonld.extract_offer`, `source="jsonld"`) and an **AI fallback** (`ai.py`
+via an OpenAI-compatible LLM, `source="ai"`) that runs only on a JSON-LD
+miss when the caller sets `aiFallback=true`. The AI stage feeds a **reduced
+version of an attacker-controlled page** (`ai.py::reduce_html` → visible text
++ price blobs) to an LLM and trusts its `{price, currency, name, available}`
+output. A malicious retailer page (or MITM) can craft text/blobs that
+instruct the model to return an arbitrary price.
+
+- **AI-extracted prices are UNTRUSTED.** A `source="ai"` price is a
+  best-effort fallback, never the authoritative price in any financial /
+  inventory / pricing decision. The JSON-LD path (`source="jsonld"`) is the
+  trusted path. Any downstream consumer that treats an AI price as
+  authoritative is at risk of prompt-injection-driven wrong prices. The
+  blast radius is bounded by the schema validator to a *wrong price* — not
+  a server compromise — but that is still a data-integrity violation.
+- **The schema is the containment boundary.** `_ParsedExtraction`
+  (discriminated on `available`; `_AvailableExtraction.price: float gt=0`,
+  `currency` length-bounded 1–16) is the invariant that keeps a
+  prompt-injected model output from becoming anything other than a wrong
+  flat price. **Do not relax it:** no optional price fields, no
+  `price: float | str`, no `min_length=0` on currency, no extra keys.
+- **The prompt is attacker-controlled.** Never extend the LLM's output
+  shape — no tool-calling, no multi-step reasoning, no additional fields.
+  `ai.py` enforces a single structured-response call; keep it that way.
+- **Optional domain allow-list (default empty = no restriction).**
+  `Settings.ai_extract_domain_allowlist` (`ARGUS_AI_EXTRACT_DOMAIN_ALLOWLIST`)
+  is a comma-separated list of retailer host suffixes, e.g.
+  `"pbtech.co.nz,kogan.co.nz"`. When non-empty, the AI stage in
+  `routes/extract.py` runs only if `urlparse(result.final_url).hostname`
+  matches a listed suffix (exact or `.suffix` subdomain match,
+  case-insensitive); otherwise it degrades to `extraction_failed` with an
+  INFO log (`ai_stage_skipped url=%s reason=host_not_allowlisted`) — no LLM
+  call, no cost. Default `""` (empty) = no restriction, byte-identical to
+  pre-allowlist behavior (secure, opt-in default).
+- The allow-list gates the **AI stage only**, never the fetch. It is a
+  single hostname-suffix predicate — **not** per-retailer code (the
+  forbidden per-site-branching pattern in `quality-guidelines.md`).
+
+**Forbidden:**
+- Treating an AI-extracted price (`source="ai"`) as authoritative in
+  financial / inventory / pricing logic.
+- Relaxing `_ParsedExtraction` (adding optional fields, widening `price` /
+  `currency` types, loosening bounds) — it is the prompt-injection
+  containment boundary.
+- Extending the LLM output shape (tool-calling, multi-step, extra keys) —
+  the single structured response is the contract.
+- Adding per-retailer branching in the allow-list match — it is a generic
+  hostname-suffix predicate, not site-specific code.
+
